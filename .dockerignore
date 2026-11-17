@@ -1,0 +1,16 @@
+# Lista blanca: la imagen lleva solo lo que el código necesita para correr.
+# Queda fuera el historial (carpetas por mes, reportes y CSV de corridas, bitácoras, .docx) y el .env.
+*
+!bin/
+!lib/
+!config/
+!dashboard/
+!docker/
+!service_types.csv
+!lista_oficial_types_instalaciones.csv
+!README.md
+
+# Datos que se generan al correr; el contenedor los crea vacíos.
+dashboard/cache/
+dashboard/runs/
+**/.DS_Store
