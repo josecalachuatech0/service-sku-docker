@@ -5,7 +5,7 @@ Herramientas para gestionar los **servicios de SKU** (armado, instalación, empa
 El proyecto tiene dos partes:
 
 - **Scripts PHP de consola (`bin/`)**: auditan el catálogo, generan reportes CSV del estado real y aplican configuraciones masivas por lote, siempre con un previo (dry-run) y dejando registro de cada escritura.
-- **Dashboard local (`dashboard/`)**: una interfaz web mínima sobre esos mismos scripts para consultar SKUs, generar el previo y aplicar lotes de hasta 300 SKUs sin usar la terminal. Los SKUs se pegan o se suben en la planilla nativa de VTEX «Valores Serviços Vinculados SKU» (.xlsx o .csv, puede traer varios types).
+- **Dashboard local (`dashboard/`)**: una interfaz web mínima sobre esos mismos scripts para consultar SKUs, generar el previo y aplicar lotes de hasta 300 SKUs sin usar la terminal. Los SKUs se pegan o se suben en la planilla nativa de VTEX «Valores Serviços Vinculados SKU» (.xlsx o .csv, un solo SKU de servicio por archivo, que puede repetirse en todas las filas).
 
 Las carpetas por mes (`AGOSTO/`, `SETIEMBRE/`…) y los CSV de la raíz son el historial de corridas y reportes de cada categoría trabajada.
 
@@ -120,6 +120,14 @@ docker run --rm -p 8080:80 -e API_KEY=... -e API_TOKEN=... -e VTEX_BASE_URL=http
 | `APP_LOG_FILE` | no | No hace falta en el contenedor; ver «Logs para rastrear fallos» |
 
 - Logs: `docker/entrypoint.sh` sigue `logs/app.log` con `tail -F` y lo copia a la salida del contenedor; si `tail` muere, lo vuelve a lanzar. Un `APP_LOG_FILE` en `/proc/…` o `/dev/…` (como el viejo `/proc/1/fd/1`) se avisa al arrancar y se reemplaza por `logs/app.log`. Al arrancar, un log de más de 50 MB se vacía (ya llegó a Azure).
+- **Imagen para entregar** (ya construida, sin que infraestructura compile nada): construir desde una carpeta con el contenido de `main`, nunca pasando un `.tar` por la entrada estándar (`git archive | docker build -`), porque así Docker no aplica el `.dockerignore` y entran los 2,594 archivos del historial. Comprobar que la imagen tiene 37 archivos y exportarla:
+
+  ```bash
+  C=$(mktemp -d); git archive main | tar -x -C "$C"
+  docker build --platform linux/amd64 -t sku-service:<fecha>-<commit> "$C"; rm -rf "$C"
+  docker run --rm --entrypoint sh sku-service:<fecha>-<commit> -c 'find /var/www/app -type f | wc -l'   # 37
+  docker save sku-service:<fecha>-<commit> | gzip -9 > sku-service-<fecha>-<commit>.tar.gz
+  ```
 - `PHP_CLI=/usr/local/bin/php` (en el `Dockerfile`): con Apache, `PHP_BINARY` viene vacío y el dashboard lanza los scripts de `bin/` con `phpCli()`.
 - `docker/php.ini`: hora de Guatemala, `max_execution_time = 300` (un Aplicar de 300 SKUs tarda 2–3 min; App Service corta a los 230 s) y errores al log, no a la página.
 - `docker/apache.conf`: `/cache` y `/runs` no se sirven por URL.
@@ -153,6 +161,10 @@ php-excel/
 ```
 
 ## Scripts principales
+
+### `descargar-catalogo.php --salida=<carpeta>`
+
+Baja a disco una copia completa del catálogo (productos, SKUs, fecha de creación, inventario y precios) para consultarlo en local. Solo lectura y reanudable. Opciones, formato y ejemplos en `docs/descarga-catalogo.md`.
 
 ### `get-skus-by-category.php --category=<id> --output=<archivo>`
 
@@ -243,6 +255,7 @@ Los CSV por categoría llevan 3 columnas (`productId`, nombre, categoría). **El
 | `revision-configurar-servicios.md` | Estado de la revisión por partes de la vista «Configurar servicios» |
 | `investigacion-precios-bulk.md` | Qué SKUs tienen precio por volumen, con qué APIs y qué posibles errores hay |
 | `evaluacion-gentle-ai.md` | Qué cambiaría al instalar Gentle-AI, riesgos, precauciones y cómo revertir |
+| `docs/descarga-catalogo.md` | Qué descarga `descargar-catalogo.php`, qué endpoints consulta, qué permisos necesita y cómo consultar la copia local |
 | `reporte-instalacion-gentle-ai.md` | Qué cambió y qué no al instalar Gentle-AI, pruebas y medición de continuidad |
 
 ## Tecnologías

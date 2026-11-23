@@ -1,11 +1,11 @@
 Id,Name,IsActive,ShowOnProductFront,ShowOnCartFront,ShowOnAttachmentFront,ShowOnFileUpload,IsGiftCard,IsRequired,skus_configurados,skus_activos
-1,"Empaque de regalo",si,si,si,no,no,si,no,110626,110624
+1,"Empaque de regalo",si,si,si,no,no,si,no,100828,100826
 2,"Servicio de Armado",no,si,si,no,no,no,no,23,23
-3,"Armado Complejidad Baja",si,si,si,si,no,no,no,948,948
-4,"Armado Complejidad Media",si,si,si,si,no,no,no,387,387
-5,"Armado Complejidad Alta",si,si,si,si,no,no,no,87,87
-6,"Visita de Verificación para Instalación de Calentador (abonable a la instalación)",si,si,si,si,no,no,no,0,0
-7,"Instalación de Calentador Eléctrico de Acumulación",si,si,si,si,no,no,no,1,1
+3,"Armado Complejidad Baja",si,si,si,si,no,no,no,1019,1019
+4,"Armado Complejidad Media",si,si,si,si,no,no,no,404,404
+5,"Armado Complejidad Alta",si,si,si,si,no,no,no,95,95
+6,"Visita de Verificación para Instalación de Calentador (abonable a la instalación)",si,si,si,si,no,no,no,19,19
+7,"Instalación de Calentador Eléctrico de Acumulación",si,si,si,si,no,no,no,0,0
 8,"Reemplazo de Calentador Eléctrico de Acumulación",si,si,si,si,no,no,no,0,0
 9,"Instalación Calentador de Gas",si,si,si,si,no,no,no,0,0
 10,"Reemplazo de Calentador de Gas",si,si,si,si,no,no,no,0,0
@@ -13,9 +13,9 @@ Id,Name,IsActive,ShowOnProductFront,ShowOnCartFront,ShowOnAttachmentFront,ShowOn
 12,"Reemplazo de Calentador Eléctrico de Paso",si,si,si,si,no,no,no,0,0
 13,"Instalación Galerías o Persianas por unidad",si,si,si,si,no,no,no,877,877
 14,"Instalación Brackets para TV de 43 Pulgadas ó más",si,si,si,si,no,no,no,0,0
-15,"Instalación Bracket en TV para Tablayeso (no importa tamaño)",si,si,si,si,no,no,no,1,1
-16,"Instalación Brackets para TV Hasta 42 pulgadas pared concreto",si,si,si,si,no,no,no,1,1
-17,"Visita de verificación para instalación de depósito nuevo (abonable a la instalación)",si,si,si,si,no,no,no,0,0
+15,"Instalación Bracket en TV para Tablayeso (no importa tamaño)",si,si,si,si,no,no,no,97,97
+16,"Instalación Brackets para TV Hasta 42 pulgadas pared concreto",si,si,si,si,no,no,no,97,97
+17,"Visita de verificación para instalación de depósito nuevo (abonable a la instalación)",si,si,si,si,no,no,no,17,17
 18,"Instalación Depósito de Agua",si,si,si,si,no,no,no,0,0
 19,"Desinstalación de Depósito Antiguo",si,si,si,si,no,no,no,0,0
 20,"Instalación Ventilador de Techo 1 unidad",si,si,si,si,no,no,no,132,132
@@ -35,36 +35,38 @@ Id,Name,IsActive,ShowOnProductFront,ShowOnCartFront,ShowOnAttachmentFront,ShowOn
 34,"Instalación OOS",no,no,no,no,no,no,no,0,0
 35,"INST APAGADO",no,no,no,no,no,no,no,0,0
 36,"Instalación de Espejo (por unidad)",si,si,si,si,no,no,no,407,407
-37,"Instalación de Repisa",si,si,si,si,no,no,no,247,247
+37,"Instalación de Repisa",si,si,si,si,no,no,no,246,246
 38,"Instalación Torre de Lavado",si,si,si,si,no,no,no,3,3
 39,"Instalación Campanas de Extracción",si,si,si,si,no,no,no,19,19
-40,"Instalación Lavadora (carga frontal y superior)",si,si,si,si,no,no,no,37,37
-41,"Instalación Estufa Eléctrica",si,si,si,si,no,no,no,12,12
+40,"Instalación Lavadora (carga frontal y superior)",si,si,si,si,no,no,no,51,51
+41,"Instalación Estufa Eléctrica",si,si,si,si,no,no,no,13,13
 42,"Instalación Refrigeradores (Ice Maker)",si,si,si,si,no,no,no,0,0
 43,"Instalación Secadoras",si,si,si,si,no,no,no,13,13
 44,"Instalación Combo Lavadora-Secadora 2 en 1",si,si,si,si,no,no,no,2,2
-45,"Instalación Estufas Gas (Incluye Cooktop)",si,si,si,si,no,no,no,28,28
-46,"Visita de Evaluación para la Instalación de tu Nuevo Aire Acondicionado",si,si,si,si,no,no,no,0,0
+45,"Instalación Estufas Gas (Incluye Cooktop)",si,si,si,si,no,no,no,34,34
+46,"Visita de Evaluación para la Instalación de tu Nuevo Aire Acondicionado (Abonable a la Instalación)",si,si,si,si,no,no,no,0,0
 47,"Armado Complejidad Avanzada",si,si,si,si,no,no,no,1,1
-48,"Instalación Accesorios de Baño 1 a 3 unidades",si,si,si,si,no,no,no,63,63
-49,"Instalación Filtro de Una Etapa",si,si,si,si,no,no,no,2,2
+48,"Instalación Accesorios de Baño 1 a 3 unidades",si,si,si,si,no,no,no,54,54
+49,"Instalación Filtro de Una Etapa",si,si,si,si,no,no,no,3,3
 50,"Instalación Filtro de Doble Etapa",si,si,si,si,no,no,no,2,2
 51,"Instalación Filtro de Triple Etapa",si,si,si,si,no,no,no,2,2
 52,"Instalación de toldo retráctil",si,si,si,si,no,no,no,2,2
-53,"Instalación alero",si,si,si,si,no,no,no,1,1
+53,"Instalación alero",si,si,si,si,no,no,no,4,4
 54,"GAX PR",si,si,si,si,no,no,no,0,0
 55,Instalaciones_prueba,no,no,no,no,no,no,no,0,0
-56,GEX,si,no,no,no,no,no,no,8203,8203
-57,"GEX + DAÑO",si,no,no,no,no,no,no,6823,6823
-58,"GEX + ROBO",si,no,no,no,no,no,no,1668,1668
-59,"GEX + SERVICIOS",si,no,no,no,no,no,no,695,695
-60,"GEX-CELULARES/SMARTWACH 1 AÑO",si,no,no,no,no,no,no,271,271
+56,GEX,si,si,si,si,no,no,no,9066,8858
+57,"GEX + DAÑO",si,si,si,si,no,no,no,9406,9114
+58,"GEX + ROBO",si,si,si,si,no,no,no,1812,1810
+59,"GEX + SERVICIOS",si,si,si,si,no,no,no,808,769
+60,"GEX-CELULARES/SMARTWACH 1 AÑO",si,no,no,no,no,no,no,299,299
 61,armado_complejidad_alta_prueba_abril_02,no,no,no,no,no,no,no,0,0
 62,"mock Service Type",si,si,si,si,no,no,no,0,0
-63,"Instalación puerta plegable",si,si,si,si,no,si,no,3,3
+63,"Instalación puerta plegable",si,si,si,si,no,si,no,7,7
 64,"Instalación de Cerradura Normal",si,si,si,si,no,no,no,418,418
 65,"Instalación de cerradura de embutir",si,si,si,si,no,no,no,8,8
 66,"Instalación de cerradura electrónica",si,si,si,si,no,no,no,45,45
-67,"Instalación de ventanas con medidas de 40 cms a 100 cms",si,si,si,si,no,no,no,16,16
+67,"Instalación de ventanas con medidas de 40 cms a 100 cms",si,si,si,si,no,no,no,17,17
 68,"Instalación ventanas con medidas 120 x 100 centímetros",si,si,si,si,no,no,no,7,7
-69,"Instalación ventanas con medidas 150 x 100 centímetros",si,si,si,si,no,no,no,9,9
+69,"Instalación ventanas con medidas 150 x 100 centímetros",si,si,si,si,no,no,no,12,12
+70,"Visita de Verificación (Bomba Nueva abonable a la instalación)",si,si,si,si,no,no,no,0,0
+71,"Instalación de sanitario",si,si,si,si,no,no,no,112,112

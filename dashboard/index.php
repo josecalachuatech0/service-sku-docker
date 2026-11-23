@@ -15,10 +15,9 @@ declare(strict_types=1);
  *     y nunca borra (marca 'revisar_manual').
  * - Aplicar solo se puede desde un previo ya generado: reutiliza los mismos skus_<type>.txt y
  *   los mismos parametros guardados en runs/<id>/params.json. No se re-teclea nada.
- * - Los SKUs entran pegados (un solo type, el del select) o en la planilla nativa de VTEX
- *   "Valores Serviços Vinculados SKU" (.xlsx/.csv, lib/planilla.php), que puede traer varios
- *   types: el script corre una vez por type dentro de la misma corrida. La planilla original
- *   queda en runs/<id>/archivo.<ext>.
+ * - Los SKUs entran pegados (un solo type, el del select) o en la planilla del proyecto
+ *   (.xlsx/.csv, lib/planilla.php), que lleva un solo SKU de servicio, repetido o no: con dos distintos se rechaza al subirla
+ *   (regla del 2026-11-23). La planilla original queda en runs/<id>/archivo.<ext>.
  * - Las corridas quedan en dashboard/runs/<id>/, no en input/.
  * - Cobertura (?m=cobertura): bin/coverage-by-category.php (solo GET) en segundo plano; el
  *   resultado queda en dashboard/cache/coverage.json y la pagina solo lo dibuja.
@@ -273,7 +272,7 @@ function readCsv(string $path): array
     return $rows;
 }
 
-// Una corrida puede llevar varios types (planilla): un skus_<type>.txt por type y params.json con la lista.
+// Una corrida guarda sus SKUs por type: un skus_<type>.txt por type y params.json con la lista.
 function newRun(array $grupos, array $params): string
 {
     $id = date('Ymd_His') . '_' . bin2hex(random_bytes(2));
@@ -455,6 +454,24 @@ function uploadedSheet(): ?array
     return $sheet + ['tmp' => $f['tmp_name'], 'name' => basename((string) $f['name']), 'ext' => $ext];
 }
 
+// Una planilla lleva un solo SKU de servicio, que se puede repetir en todas las filas. Devuelve el error si trae
+// mas de uno distinto, con las primeras filas de cada uno. Cada SKU de servicio es de un solo type.
+function errorVariosServicios(array $items): ?string
+{
+    $filas = [];
+    foreach ($items as $it) {
+        $filas[$it['type']][] = $it['fila'];
+    }
+    if (count($filas) < 2) {
+        return null;
+    }
+    $skus = SERVICE_SKUS + newServiceSkus();
+    $detalle = array_map(fn(int $type, array $f): string => "{$skus[$type]} (filas " . implode(', ', array_slice($f, 0, 5))
+        . (count($f) > 5 ? '…' : '') . ')', array_keys($filas), $filas);
+    return 'La planilla debe traer un solo SKU de servicio (puede repetirse en todas las filas) y trae ' . count($filas) . ': '
+        . implode('; ', $detalle) . '. Sube un archivo por SKU de servicio.';
+}
+
 // Types activos de VTEX que caen en Instalacion, Armado, Visita o Reemplazo y estan en la lista
 // oficial (isOfficialServiceType), indexados por id.
 function loadServiceTypes(string $path): array
@@ -467,9 +484,20 @@ function loadServiceTypes(string $path): array
         }
         $id = (int) $r['Id'];
         $types[$id] = ['id' => $id, 'name' => $r['Name'], 'group' => $group,
-            'value' => SERVICE_VALUES[$id] ?? null, 'defaultName' => serviceDefaultName($id, $group)];
+            'value' => serviceValue($id), 'defaultName' => serviceDefaultName($id, $group)];
     }
     return $types;
+}
+
+// Aviso por cada type activo con mas de un value en VTEX: no se habilita hasta que quede uno.
+function avisosValuesRepetidos(array $repetidos, array $types): array
+{
+    $avisos = [];
+    foreach (array_intersect_key($repetidos, $types) as $id => $values) {
+        $avisos[] = "El type $id «{$types[$id]['name']}» tiene " . count($values) . ' values en VTEX (' . implode(', ', $values)
+            . '). No se puede configurar hasta que quede uno solo.';
+    }
+    return $avisos;
 }
 
 // Arranque: si falta una credencial o un archivo de referencia, o no se puede escribir en cache/ o runs/,
@@ -524,12 +552,14 @@ $inicioAccion = microtime(true);
 try {
     if ($action === 'tipos') {
         @mkdir(dirname(TYPES_CACHE), 0775, true);
-        $run = runScript(['list-service-types.php', '--no-skus', '--output=' . TYPES_CACHE]);
+        $run = runScript(['update-services.php', '--types=' . TYPES_CACHE, '--values=' . VALUES_COPY_JSON]);
         if ($run['code'] !== 0) {
             $tiposFallo = $run;   // el toast distingue VTEX no disponible de otro fallo
-            throw new RuntimeException('No se pudieron leer los types de VTEX: ' . trim($run['err']));
+            throw new RuntimeException('No se pudo completar la actualización desde VTEX: ' . trim($run['err']));
         }
-        $notice = 'Types actualizados desde VTEX.';
+        $notice = 'Types actualizados desde VTEX.'
+            . (preg_match('/^Values nuevos habilitados: (type .+)$/m', $run['out'], $m) ? ' Values nuevos habilitados: ' . $m[1] : '')
+            . (savedServiceValues()['completo'] ? '' : ' La búsqueda de values sigue en segundo plano.');
     }
 
     if ($action === 'consultar' || $action === 'previo') {
@@ -545,6 +575,10 @@ try {
             }
             if ($upload['items'] === []) {
                 throw new RuntimeException('El archivo no tiene filas activas para procesar.');
+            }
+            $varios = errorVariosServicios($upload['items']);
+            if ($varios !== null) {
+                throw new RuntimeException($varios);
             }
             // type => SKUs únicos, en el orden del archivo.
             $grupos = [];
@@ -590,13 +624,14 @@ try {
             $donde = $upload === null ? '' : ' (filas ' . implode(', ', array_slice(array_column(
                 array_filter($upload['items'], fn($it) => $it['type'] === $type), 'fila'), 0, 5)) . ')';
             $t = $allowed[$type] ?? null;
+            $grupo = SERVICE_GROUPS[$t['group'] ?? ''] ?? '';
             if ($t === null) {
                 $problemas[] = $upload === null ? 'Elige un servicio de la lista.'
                     : "El type $type$donde no es un servicio activo de Instalación, Armado, Visita o Reemplazo.";
             } elseif ($t['value'] === null) {
                 $problemas[] = "El type $type$donde no tiene value conocido. No se puede configurar todavía.";
             } elseif ($t['defaultName'] === '') {
-                $problemas[] = "El type $type$donde no tiene Name canónico definido (Visita). No se puede configurar todavía.";
+                $problemas[] = "El type $type$donde no tiene Name canónico definido ({$grupo}). No se puede configurar todavía.";
             } else {
                 $params['grupos'][] = ['type' => $type, 'value' => $t['value'], 'name' => $t['defaultName'], 'skus' => count($lista)];
             }
@@ -732,19 +767,24 @@ function typesAutoJob(): array
 }
 
 // ¿Toca lanzar la actualización automática? $copia es la fecha de TYPES_CACHE (null si no existe).
-function typesVencidos(?int $copia, array $auto, int $ahora): bool
+function typesVencidos(?int $copia, array $auto, int $ahora, bool $valuesIncompletos = false): bool
 {
-    if ($auto['running'] || ($copia !== null && $ahora - $copia < TYPES_VIGENCIA)) {
+    if ($auto['running']) {
         return false;
     }
-    $fallo = $auto['exit'] !== null && $auto['exit'] !== 0;
-    return !($fallo && $ahora - (int) $auto['fecha'] < TYPES_REINTENTO);
+    // Una falla posterior a la copia se reintenta aunque la copia sea reciente: pudieron fallar solo los values.
+    $fallo = $auto['exit'] !== null && $auto['exit'] !== 0 && ($copia === null || (int) $auto['fecha'] >= $copia);
+    if ($fallo) {
+        return $ahora - (int) $auto['fecha'] >= TYPES_REINTENTO;
+    }
+    return $valuesIncompletos || $copia === null || $ahora - $copia >= TYPES_VIGENCIA;
 }
 
 $typesAuto = typesAutoJob();
 // Solo desde el servidor web: los tests incluyen esta página por CLI y no deben leer VTEX.
-if (PHP_SAPI !== 'cli' && typesVencidos(is_file(TYPES_CACHE) ? (int) filemtime(TYPES_CACHE) : null, $typesAuto, time())) {
-    lanzarTarea('types_auto', TYPES_AUTO_LOG, 'list-service-types.php', ['--no-skus', '--output=' . TYPES_CACHE]);
+if (PHP_SAPI !== 'cli' && typesVencidos(is_file(TYPES_CACHE) ? (int) filemtime(TYPES_CACHE) : null, $typesAuto, time(), !savedServiceValues()['completo'])) {
+    lanzarTarea('types_auto', TYPES_AUTO_LOG, 'update-services.php',
+        ['--types=' . TYPES_CACHE, '--values=' . VALUES_COPY_JSON, '--hasta-terminar']);
     $typesAuto = ['running' => true, 'exit' => null, 'fecha' => time()];
 }
 
@@ -1285,6 +1325,9 @@ details summary { cursor: pointer; color: var(--c-muted); }
 <?php if (!$typesFromVtex): ?>
     <div class="msg warn">Los types vienen de la copia guardada <code>service_types.csv</code>, que está desactualizada. Usa «Actualizar Servicios».</div>
 <?php endif; ?>
+<?php foreach (avisosValuesRepetidos(ambiguousServiceValues(), $serviceTypes) as $aviso): ?>
+    <div class="msg warn" role="alert"><?= h($aviso) ?></div>
+<?php endforeach; ?>
 <?php if (!$typesAuto['running'] && $typesAuto['exit'] !== null && $typesAuto['exit'] !== 0 && ($typesDate === null || $typesAuto['fecha'] > filemtime($typesPath))): ?>
     <div class="msg warn">La actualización automática de types falló el <?= date('Y-m-d H:i', $typesAuto['fecha']) ?>. Se reintenta en 1 hora; también puedes usar «Actualizar Servicios».</div>
 <?php endif; ?>
@@ -1300,7 +1343,7 @@ details summary { cursor: pointer; color: var(--c-muted); }
                 <button type="button" id="skus-limpiar"<?= $pegados['repetidos'] === 0 ? ' hidden' : '' ?>>Quitar repetidos</button>
             </div>
             <p id="skus-limite" role="alert"><?= h($pegados['limite']) ?></p>
-            <label for="archivo" style="margin-top:12px">… o sube la planilla (.xlsx o .csv)</label>
+            <label for="archivo" style="margin-top:12px">… o sube la planilla (.xlsx o .csv, un solo SKU de servicio por archivo)</label>
             <div class="archivo">
                 <button type="button" onclick="document.getElementById('plantilla').showModal()">Descargar plantilla</button>
                 <input type="file" id="archivo" name="archivo" accept=".xlsx,.csv">
@@ -1317,7 +1360,7 @@ details summary { cursor: pointer; color: var(--c-muted); }
                     <button type="button" onclick="this.closest('dialog').close()">Cancelar</button>
                 </div>
             </dialog>
-            <p class="hint">Dos columnas: «SKU» (el SKU del producto) y «SKU de servicio». Puede traer varios servicios. El servicio, el value y el Name salen del SKU de servicio, no del archivo.</p>
+            <p class="hint">Dos columnas: «SKU» (el SKU del producto) y «SKU de servicio». Todas las filas llevan el mismo SKU de servicio. El servicio, el value y el Name salen del SKU de servicio, no del archivo.</p>
         </div>
         <div>
             <label for="grupo">Servicio a configurar</label>

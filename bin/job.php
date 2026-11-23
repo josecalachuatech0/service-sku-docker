@@ -18,7 +18,7 @@ declare(strict_types=1);
  * - El registro siempre termina en EXIT, también si el script no existe (EXIT:1) o si job.php se cae
  *   antes de lanzarlo (EXIT:255).
  * - Solo lanza scripts de bin/. Lo que escriban en VTEX depende del script; los que usa el dashboard
- *   aquí (coverage-by-category, list-service-types) solo leen.
+ *   aquí (coverage-by-category, update-services) solo leen.
  */
 
 // El registro se abre antes de cargar la librería y de validar el script: cualquier salida temprana o

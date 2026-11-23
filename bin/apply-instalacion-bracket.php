@@ -22,6 +22,8 @@ declare(strict_types=1);
  * - --dry-run es el comportamiento POR DEFECTO. Solo escribe con --aplicar.
  * - Idempotente: si el SKU ya tiene el type 16 con el value objetivo, hace PUT para asegurar
  *   Name/Text/IsActive. Si no lo tiene, hace POST.
+ * - Un SKU no recibe el mismo type dos veces: un solo --aplicar a la vez (por equipo) y los SKUs se comparan
+ *   sin ceros a la izquierda.
  * - NUNCA borra relaciones. A diferencia de los apply-*.php mas viejos, si encuentra una
  *   relacion del mismo type con OTRO value, no la borra: marca la fila como 'revisar_manual'
  *   y no toca ese SKU. Borrar es una decision que se toma aparte.
@@ -84,7 +86,7 @@ function readSkusFromTxt(string $path): array
     foreach ($lines as $line) {
         $sku = trim(str_replace(["\r", '"'], '', $line));
         if (preg_match('/^\d+$/', $sku)) {
-            $skus[] = $sku;
+            $skus[] = (string) (int) $sku;   // 0123 y 123 son el mismo SKU
         }
     }
 
@@ -119,6 +121,16 @@ function clasificarPorNombre(string $nombre): string
     }
 
     return $max <= 42 ? 'hasta_42_plg' : 'mas_de_42_plg';
+}
+
+// Un SKU no puede recibir el mismo type dos veces: dos Aplicar a la vez leerian VTEX antes de que el otro
+// escriba y los dos crearian. El candado va sobre este archivo y el sistema lo suelta al terminar el proceso.
+if ($aplicar) {
+    $candado = fopen(__FILE__, 'r');
+    if ($candado === false || !flock($candado, LOCK_EX | LOCK_NB)) {
+        fwrite(STDERR, "Ya hay otro Aplicar en curso. Espera a que termine y genera un previo nuevo. No se escribió nada.\n");
+        exit(1);
+    }
 }
 
 try {

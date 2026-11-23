@@ -15,8 +15,8 @@ declare(strict_types=1);
  * - Elegible: todo SKU del catalogo, activo o no, con o sin stock. Los productos sin SKU no
  *   cuentan, y Bombas Sumergibles (1645) queda fuera por estar mal categorizada (E18).
  * - Configurado: al menos una relacion SkuService activa cuyo type tenga value conocido
- *   (SERVICE_VALUES), con ese value y con el Name canonico del type (serviceDefaultName).
- *   Visita no tiene Name canonico: ahi basta el value. Solo cuentan los types de la lista oficial
+ *   (serviceValue: SERVICE_VALUES o uno nuevo habilitado solo), con ese value y con el Name canonico
+ *   del type (serviceDefaultName). En Visita y Reemplazo basta el value. Solo cuentan los types de la lista oficial
  *   (isOfficialServiceType, desde el 2026-11-13).
  * - El arbol tiene 3 niveles (44 departamentos, 444 categorias, 1,817 subcategorias al 2026-10-30).
  *   Los SKUs salen de GetProductAndSkuIds por cada hoja (la subcategoria final, o la categoria o
@@ -91,14 +91,18 @@ if ($listadoPath !== null) {
 echo "Relaciones en el catalogo: " . count($relations) . "\n";
 
 $configured = [];
+$newValues = newServiceValues();   // types habilitados solos: su grupo no esta en las listas de arriba
 foreach ($relations as $rel) {
     $type = (int) ($rel['SkuServiceTypeId'] ?? 0);
-    if (!isOfficialServiceType($type) || ($rel['IsActive'] ?? false) !== true || !isset(SERVICE_VALUES[$type])
-        || (int) ($rel['SkuServiceValueId'] ?? 0) !== SERVICE_VALUES[$type]) {
+    if (!isOfficialServiceType($type) || ($rel['IsActive'] ?? false) !== true || serviceValue($type) === null
+        || (int) ($rel['SkuServiceValueId'] ?? 0) !== serviceValue($type)) {
         continue;
     }
-    $group = in_array($type, VISITA_TYPES, true) ? 'visita' : (in_array($type, ARMADO_TYPES, true) ? 'armado' : 'instalacion');
-    if ($group !== 'visita' && trim((string) ($rel['Name'] ?? '')) !== serviceDefaultName($type, $group)) {
+    $group = $newValues[$type]['grupo']
+        ?? (in_array($type, VISITA_TYPES, true) ? 'visita' : (in_array($type, ARMADO_TYPES, true) ? 'armado' : 'instalacion'));
+    // En Visita y Reemplazo basta el value: el 2026-11-23 habia 36 visitas activas con otro Name.
+    $canonico = in_array($group, ['visita', 'reemplazo'], true) ? '' : serviceDefaultName($type, $group);
+    if ($canonico !== '' && trim((string) ($rel['Name'] ?? '')) !== $canonico) {
         continue;
     }
     $configured[(string) ($rel['SkuId'] ?? '')] = true;
